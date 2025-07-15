@@ -22,13 +22,27 @@ if uploaded:
         st.header("Tableau de Bord Principal")
         cols = st.columns(3)
         if "Calcul Marges" in sheets:
-            df_m = sheets["Calcul Marges"]
-            ca = (df_m["Prix de vente HT (€)"] * df_m["Quantité vendue"]).sum()
-            marge = df_m["Marge nette (€)"].sum()
-            cols[0].metric("Chiffre d'affaires HT", f"{ca:,.0f} €")
-            cols[1].metric("Marge nette totale", f"{marge:,.0f} €")
-            evolution = df_m.groupby(df_m.index).sum()["Total CA Produit (€)"]
-            cols[2].line_chart(evolution)
+    df_m = sheets["Calcul Marges"].copy()
+
+    # 1) Affiche les colonnes réellement détectées (pour debug)
+    st.write("Colonnes dans ‘Calcul Marges’ :", df_m.columns.tolist())
+
+    # 2) On ne fait le calcul de CA que si on a bien ces deux colonnes
+    required = ["Prix de vente HT (€)", "Quantité vendue"]
+    if all(col in df_m.columns for col in required):
+        # Force le type numérique
+        df_m["Prix de vente HT (€)"] = pd.to_numeric(df_m["Prix de vente HT (€)"], errors="coerce").fillna(0)
+        df_m["Quantité vendue"]      = pd.to_numeric(df_m["Quantité vendue"], errors="coerce").fillna(0)
+
+        ca = (df_m["Prix de vente HT (€)"] * df_m["Quantité vendue"]).sum()
+        cols[0].metric("Chiffre d'affaires HT", f"{ca:,.0f} €")
+
+        # (On met la partie marge de côté pour l’instant, elle sera réintégrée
+        # dès qu’on aura le bon nom de colonne ou conversion)
+        cols[1].metric("Marge nette totale", "–")
+        cols[2].info("Graphique CA uniquement pour l’instant")
+    else:
+        st.warning("Il manque ‘Prix de vente HT (€)’ ou ‘Quantité vendue’ dans ta feuille")
         else:
             st.info("Onglet 'Calcul Marges' introuvable.")
 
